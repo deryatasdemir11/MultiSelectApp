@@ -1,64 +1,66 @@
-import { Image, StyleSheet, Platform, Text } from 'react-native';
+import { Image, StyleSheet, Text, FlatList, View, ActivityIndicator, type ActivityIndicatorProps, Dimensions, TouchableOpacity } from 'react-native';
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import useAPI from '@/hooks/useAPI';
 import NotFoundScreen from '../+not-found';
+import { CheckBox, Icon } from '@rneui/themed';
+import { useState } from 'react';
 
 export default function HomeScreen() {
 
   const { characters, loading, error } = useAPI();
 
-  if(error) {
+  const [checked, setChecked] = useState(null);
+
+  const [search, setSearch] = useState("ric");
+
+  if (error) {
     return (
-      <NotFoundScreen message={`${error}`}/>
+      <NotFoundScreen message={`${error}`} />
     )
   }
 
   return (
-    <ParallaxScrollView>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({ ios: 'cmd + d', android: 'cmd + m' })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <ThemedView style={styles.container}>
+      <FlatList
+        data={characters}
+        showsVerticalScrollIndicator={false}
+        keyExtractor={(item) => item.id.toString()}
+        contentContainerStyle={characters && { borderRadius: 12, borderWidth: characters.length > 0 ? 1 : 0 }}
+        renderItem={({ item }) => (
+          <View style={{ padding: 12, flexDirection: 'row', gap: 16, borderBottomWidth: item === characters[characters.length - 1] ? 0 : 1 }}>
+            <TouchableOpacity onPress={() => setChecked(item.id)} style={{ justifyContent: 'center' }}>
+              <Image source={item.id === checked ? require("../../assets/images/checked.png") : require("../../assets/images/unchecked.png")} style={{ width: 24, height: 24 }} />
+            </TouchableOpacity>
+            <Image style={{ width: 50, height: 50, borderRadius: 8 }} source={{
+              uri: item.image,
+            }} />
+            <View style={styles.titleContainer}>
+              <Text style={{ fontSize: 16, fontWeight: 'normal' }} numberOfLines={1}>{item.name}</Text>
+              <Text numberOfLines={1}>{`${item.episode.length} Episodes`} </Text>
+            </View>
+          </View>
+        )}
+        ListEmptyComponent={() => <ActivityIndicator size="large" color="#000" style={{ height: Dimensions.get('screen').height }} />}
+      />
+
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 16,
+    gap: 16,
+    paddingTop: 42
+  },
+  iconContainer: {
+    justifyContent: 'center',
+    flex: 1
+  },
   titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   stepContainer: {
     gap: 8,
