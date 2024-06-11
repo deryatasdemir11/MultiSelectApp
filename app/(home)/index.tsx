@@ -1,18 +1,29 @@
-import { Image, StyleSheet, Text, FlatList, View, ActivityIndicator, type ActivityIndicatorProps, Dimensions, TouchableOpacity } from 'react-native';
+import { Image, StyleSheet, Text, FlatList, View, ActivityIndicator, type ActivityIndicatorProps, Dimensions, TouchableOpacity, TextInput, ScrollView } from 'react-native';
 
 import { ThemedView } from '@/components/ThemedView';
 import useAPI from '@/hooks/useAPI';
 import NotFoundScreen from '../+not-found';
-import { CheckBox, Icon } from '@rneui/themed';
 import { useState } from 'react';
 
 export default function HomeScreen() {
 
   const { characters, loading, error } = useAPI();
 
-  const [checked, setChecked] = useState(null);
+  const [checked, setChecked] = useState<number>();
 
-  const [search, setSearch] = useState("ric");
+  const [search, setSearch] = useState<string>("");
+
+  const [searchList, setSearchList] = useState<string[]>([]);
+
+
+  const handleSearchPress = () => {
+      if(search !== "") {
+        setSearchList([...searchList, search]);
+
+        setSearch("");
+      }
+  };
+
 
   if (error) {
     return (
@@ -22,6 +33,19 @@ export default function HomeScreen() {
 
   return (
     <ThemedView style={styles.container}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ borderWidth: 1, padding: 6, borderRadius: 8 }} >
+        <View style={{ flexDirection: 'row', gap: 6, }}>
+          {searchList.map((i, ix) => (
+            <View key={ix} style={{ flexDirection: 'row', borderRadius: 8, borderWidth: 1, paddingLeft: 12, paddingVertical: 6, gap: 4, paddingRight: 8 }}>
+              <Text style={{ alignSelf: 'center' }}>{i}</Text>
+              <Image source={require("../../assets/images/close.png")} style={{ width: 28, height: 28, alignSelf: 'center' }} />
+
+            </View>
+          ))}
+          <TextInput placeholder='Search...' cursorColor="#000" value={search} onChangeText={setSearch} onSubmitEditing={handleSearchPress} />
+        </View>
+
+      </ScrollView>
       <FlatList
         data={characters}
         showsVerticalScrollIndicator={false}
@@ -52,7 +76,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    gap: 16,
+    gap: 12,
     paddingTop: 42
   },
   iconContainer: {
