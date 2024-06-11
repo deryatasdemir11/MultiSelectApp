@@ -1,29 +1,50 @@
-import { Image, StyleSheet, Text, FlatList, View, ActivityIndicator, type ActivityIndicatorProps, Dimensions, TouchableOpacity, TextInput, ScrollView } from 'react-native';
+import { Image, StyleSheet, Text, FlatList, View, ActivityIndicator, Dimensions, TouchableOpacity, TextInput, ScrollView } from 'react-native';
 
 import { ThemedView } from '@/components/ThemedView';
 import useAPI from '@/hooks/useAPI';
 import NotFoundScreen from '../+not-found';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function HomeScreen() {
 
   const { characters, loading, error } = useAPI();
-
+  const [data, setData] = useState<any[]>(characters);
   const [checked, setChecked] = useState<number>();
-
   const [search, setSearch] = useState<string>("");
-
   const [searchList, setSearchList] = useState<string[]>([]);
 
+  useEffect(() => {
+    setData(characters);
+  }, [characters, loading, error])
 
-  const handleSearchPress = () => {
-      if(search !== "") {
-        setSearchList([...searchList, search]);
 
-        setSearch("");
-      }
+  const handleAdd = () => {
+    if (search !== "") {
+      setSearchList([...searchList, search]);
+
+      setSearch("");
+    }
   };
 
+  const handleDelete = (ix: number) => {
+
+    const updatedList = searchList.filter((_, idx) => idx !== ix); // Gelen index'e göre listeyi düzenleyecek
+    setSearchList(updatedList); // Düzenlenen filtreyi Tekrar atayacak
+  };
+
+  const filterData = (data: any[], searchList: string[], search: string) => {
+
+    return data.filter((cItem) => {
+      for (const searchItem of searchList) {
+        if (!cItem.name.toLowerCase().includes(searchItem.toLowerCase())) {
+          return false;
+        }
+      }
+
+      return cItem.name.toLowerCase().includes(search.toLowerCase());
+    });
+
+  }
 
   if (error) {
     return (
@@ -33,24 +54,27 @@ export default function HomeScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ borderWidth: 1, padding: 6, borderRadius: 8 }} >
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ borderWidth: 1, padding: 6, borderRadius: 8, }} >
         <View style={{ flexDirection: 'row', gap: 6, }}>
           {searchList.map((i, ix) => (
             <View key={ix} style={{ flexDirection: 'row', borderRadius: 8, borderWidth: 1, paddingLeft: 12, paddingVertical: 6, gap: 4, paddingRight: 8 }}>
               <Text style={{ alignSelf: 'center' }}>{i}</Text>
-              <Image source={require("../../assets/images/close.png")} style={{ width: 28, height: 28, alignSelf: 'center' }} />
+              <TouchableOpacity onPress={() => handleDelete(ix)}>
+                <Image source={require("../../assets/images/close.png")} style={{ width: 28, height: 28, alignSelf: 'center' }} />
+              </TouchableOpacity>
 
             </View>
           ))}
-          <TextInput placeholder='Search...' cursorColor="#000" value={search} onChangeText={setSearch} onSubmitEditing={handleSearchPress} />
+          <TextInput placeholder='Search...' cursorColor="#000" value={search} onChangeText={setSearch} onSubmitEditing={handleAdd} style={{ width: Dimensions.get('screen').width / 2, paddingVertical: 6, }} />
         </View>
 
       </ScrollView>
+      {loading && <ActivityIndicator size="large" color="#000" style={{}} />}
       <FlatList
-        data={characters}
+        data={data ? filterData(data, searchList, search) : []}
         showsVerticalScrollIndicator={false}
         keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={characters && { borderRadius: 12, borderWidth: characters.length > 0 ? 1 : 0 }}
+        contentContainerStyle={characters && { borderRadius: 12, borderWidth: characters.length > 0 ? 1 : 0, }}
         renderItem={({ item }) => (
           <View style={{ padding: 12, flexDirection: 'row', gap: 16, borderBottomWidth: item === characters[characters.length - 1] ? 0 : 1 }}>
             <TouchableOpacity onPress={() => setChecked(item.id)} style={{ justifyContent: 'center' }}>
@@ -65,7 +89,7 @@ export default function HomeScreen() {
             </View>
           </View>
         )}
-        ListEmptyComponent={() => <ActivityIndicator size="large" color="#000" style={{ height: Dimensions.get('screen').height }} />}
+        ListEmptyComponent={() => !loading && <Text>Hello</Text>}
       />
 
     </ThemedView>
@@ -74,10 +98,10 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    height: Dimensions.get("screen").height,
     padding: 16,
     gap: 12,
-    paddingTop: 42
+    paddingTop: 38
   },
   iconContainer: {
     justifyContent: 'center',
