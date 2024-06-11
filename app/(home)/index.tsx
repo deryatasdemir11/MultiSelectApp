@@ -1,15 +1,16 @@
-import { Image, StyleSheet, Text, FlatList, View, ActivityIndicator, Dimensions, TouchableOpacity, TextInput, ScrollView } from 'react-native';
+import { Image, StyleSheet, Text, FlatList, View, ActivityIndicator, Dimensions, TouchableOpacity, TextInput, ScrollView, KeyboardAvoidingView } from 'react-native';
 
 import { ThemedView } from '@/components/ThemedView';
 import useAPI from '@/hooks/useAPI';
 import NotFoundScreen from '../+not-found';
 import { useEffect, useState } from 'react';
+import { ThemedText } from '@/components/ThemedText';
 
 export default function HomeScreen() {
 
   const { characters, loading, error } = useAPI();
   const [data, setData] = useState<any[]>(characters);
-  const [checked, setChecked] = useState<number>();
+  const [checkedList, setCheckedList] = useState<number[]>([]);
   const [search, setSearch] = useState<string>("");
   const [searchList, setSearchList] = useState<string[]>([]);
 
@@ -34,17 +35,78 @@ export default function HomeScreen() {
 
   const filterData = (data: any[], searchList: string[], search: string) => {
 
-    return data.filter((cItem) => {
-      for (const searchItem of searchList) {
-        if (!cItem.name.toLowerCase().includes(searchItem.toLowerCase())) {
-          return false;
-        }
-      }
+    const filteredResults = [];
 
-      return cItem.name.toLowerCase().includes(search.toLowerCase());
+    if(!data) {
+      return [];
+    }
+
+    if ( search === "" && searchList.length === 0){
+      return data;
+    }
+
+    if(search !== "") {
+      const filteredSearchData =data.filter((cItem) => {
+        return cItem.name.toLocaleLowerCase().includes(search.toLocaleLowerCase()) 
+      });
+
+      filteredResults.push(...filteredSearchData)
+    }
+    
+    for (const searchItem of searchList) {
+      
+      const filteredSearchListData = data.filter((cItem) => {
+        if(cItem.name.toLocaleLowerCase().includes(searchItem.toLocaleLowerCase())) {
+          return true;
+        }
+        
+
+        return false;
+      });
+
+      
+
+      filteredResults.push(...filteredSearchListData);
+      
+    }
+
+
+    const matchingResult = filteredResults.filter((value, index, self) => {
+      return self.indexOf(value) === index;
     });
 
+    return matchingResult;
+
   }
+
+  // checked Characters Function
+  const selectedAdd = (id: number) => {
+
+    if (checkedList.includes(id)) {
+      const updatedCheckedList = checkedList.filter((itemId) => itemId !== id);
+
+      setCheckedList(updatedCheckedList);
+
+    } else {
+
+      const updatedCheckedList = [...checkedList, id];
+
+      setCheckedList(updatedCheckedList);
+    }
+
+  }
+
+  const renderTextWithHighlight = (item: string, search: string) => {
+    const regex = new RegExp(`(${search})`, 'gi');
+    const parts = item.split(regex);
+  
+    return parts.map((part, index) => {
+      if (part.toLowerCase() === search.toLowerCase()) {
+        return <Text key={index} style={{ fontWeight: 'bold', }}>{part}</Text>;
+      }
+      return <Text key={index}>{part}</Text>;
+    });
+  };
 
   if (error) {
     return (
@@ -54,42 +116,49 @@ export default function HomeScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ borderWidth: 1, padding: 6, borderRadius: 8, }} >
-        <View style={{ flexDirection: 'row', gap: 6, }}>
-          {searchList.map((i, ix) => (
-            <View key={ix} style={{ flexDirection: 'row', borderRadius: 8, borderWidth: 1, paddingLeft: 12, paddingVertical: 6, gap: 4, paddingRight: 8 }}>
-              <Text style={{ alignSelf: 'center' }}>{i}</Text>
-              <TouchableOpacity onPress={() => handleDelete(ix)}>
-                <Image source={require("../../assets/images/close.png")} style={{ width: 28, height: 28, alignSelf: 'center' }} />
-              </TouchableOpacity>
+      <KeyboardAvoidingView behavior='padding' style={{}} >
 
-            </View>
-          ))}
-          <TextInput placeholder='Search...' cursorColor="#000" value={search} onChangeText={setSearch} onSubmitEditing={handleAdd} style={{ width: Dimensions.get('screen').width / 2, paddingVertical: 6, }} />
-        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ borderWidth: 1, borderRadius: 8, padding: 6 }} >
+          <View style={{ flexDirection: 'row', gap: 6, }}>
+            {searchList.map((i, ix) => (
+              <View key={ix} style={{ flexDirection: 'row', borderRadius: 8, borderWidth: 1, paddingLeft: 12, gap: 4, paddingRight: 8 }}>
+                <Text style={{ alignSelf: 'center' }}>{i}</Text>
+                <TouchableOpacity onPress={() => handleDelete(ix)} style={{ paddingTop: 4 }}>
+                  <Image source={require("../../assets/images/close.png")} style={{ width: 28, height: 28, }} />
+                </TouchableOpacity>
 
-      </ScrollView>
+              </View>
+            ))}
+            <TextInput placeholder='Search...' cursorColor="#000" value={search} onChangeText={setSearch} onSubmitEditing={handleAdd} style={{ width: Dimensions.get('screen').width / 2, paddingVertical: 6, }} />
+          </View>
+
+        </ScrollView>
+      </KeyboardAvoidingView>
+
       {loading && <ActivityIndicator size="large" color="#000" style={{}} />}
       <FlatList
-        data={data ? filterData(data, searchList, search) : []}
+        data={filterData(data, searchList, search)}
         showsVerticalScrollIndicator={false}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={characters && { borderRadius: 12, borderWidth: characters.length > 0 ? 1 : 0, }}
-        renderItem={({ item }) => (
-          <View style={{ padding: 12, flexDirection: 'row', gap: 16, borderBottomWidth: item === characters[characters.length - 1] ? 0 : 1 }}>
-            <TouchableOpacity onPress={() => setChecked(item.id)} style={{ justifyContent: 'center' }}>
-              <Image source={item.id === checked ? require("../../assets/images/checked.png") : require("../../assets/images/unchecked.png")} style={{ width: 24, height: 24 }} />
+        keyExtractor={(item, index) => index.toString()}
+        contentContainerStyle={{ 
+          borderRadius: filterData(data, searchList,search).length > 0 ? 12 : 0,
+          borderWidth: filterData(data, searchList, search).length > 0 ? 1 : 0 
+         }}
+        renderItem={({ item, index }) => (
+          <View style={{ padding: 12, flexDirection: 'row', gap: 16, borderTopWidth: index === 0 ? 0 : 1 }}>
+            <TouchableOpacity onPress={() => selectedAdd(item.id)} style={{ justifyContent: 'center' }}>
+              <Image source={checkedList.includes(item.id) ? require("../../assets/images/checked.png") : require("../../assets/images/unchecked.png")} style={{ width: 24, height: 24 }} />
             </TouchableOpacity>
             <Image style={{ width: 50, height: 50, borderRadius: 8 }} source={{
               uri: item.image,
             }} />
             <View style={styles.titleContainer}>
-              <Text style={{ fontSize: 16, fontWeight: 'normal' }} numberOfLines={1}>{item.name}</Text>
+              <Text style={{ fontSize: 16}} numberOfLines={1} >{renderTextWithHighlight(item.name, search)}</Text>
               <Text numberOfLines={1}>{`${item.episode.length} Episodes`} </Text>
             </View>
           </View>
         )}
-        ListEmptyComponent={() => !loading && <Text>Hello</Text>}
+        ListEmptyComponent={() => !loading && <ThemedText type="default" style={{ borderWidth: 0 , }}>Maalesef arama sonucuna göre bir karakter bulunamadı...</ThemedText>}
       />
 
     </ThemedView>
